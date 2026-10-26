@@ -82,6 +82,8 @@ fn make_fixed_size<T>(buffer: Box<[T]>) -> Box<[T; LOCAL_QUEUE_CAPACITY]> {
 }
 
 /// Create a new local run-queue
+// requires: true
+// ensures: Arc::ptr_eq(&__out.0 .0, &__out.1 .inner)
 pub(crate) fn local<T: 'static>() -> (Steal<T>, Local<T>) {
     let mut buffer = Vec::with_capacity(LOCAL_QUEUE_CAPACITY);
 
@@ -344,6 +346,8 @@ impl<T> Local<T> {
     }
 
     /// Pops a task from the local queue.
+    // requires: true
+    // ensures: __out.is_none() || __out.is_some()
     pub(crate) fn pop(&mut self) -> Option<task::Notified<T>> {
         let mut head = self.inner.head.load(Acquire);
 
@@ -391,6 +395,8 @@ impl<T> Steal<T> {
     }
 
     /// Steals half the tasks from self and place them into `dst`.
+    // requires: true
+    // ensures: (__out.is_some() ==> dst.inner.tail.load(Acquire) > old(dst.inner.tail.load(Acquire))) && (__out.is_none() ==> dst.inner.tail.load(Acquire) == old(dst.inner.tail.load(Acquire)))
     pub(crate) fn steal_into(
         &self,
         dst: &mut Local<T>,
@@ -446,6 +452,8 @@ impl<T> Steal<T> {
 
     // Steal tasks from `self`, placing them into `dst`. Returns the number of
     // tasks that were stolen.
+    // requires: true
+    // ensures: __out == 0 || (__out > 0 && __out <= (LOCAL_QUEUE_CAPACITY as UnsignedShort / 2))
     fn steal_into2(&self, dst: &mut Local<T>, dst_tail: UnsignedShort) -> UnsignedShort {
         let mut prev_packed = self.0.head.load(Acquire);
         let mut next_packed;
@@ -576,6 +584,8 @@ impl<T> Inner<T> {
         LOCAL_QUEUE_CAPACITY - (tail.wrapping_sub(steal) as usize)
     }
 
+    // requires: true
+    // ensures: __out == self.tail.load(Acquire).wrapping_sub(unpack(self.head.load(Acquire)).1)
     fn len(&self) -> UnsignedShort {
         let (_, head) = unpack(self.head.load(Acquire));
         let tail = self.tail.load(Acquire);

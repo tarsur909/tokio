@@ -31,6 +31,8 @@ const SEARCH_MASK: usize = (1 << UNPARK_SHIFT) - 1;
 struct State(usize);
 
 impl Idle {
+    // requires: true
+    // ensures: __out.0.state.load(Ordering::Acquire) == State::new(num_workers).into() && __out.0.num_workers == num_workers && __out.1.sleepers.len() == 0
     pub(super) fn new(num_workers: usize) -> (Idle, Synced) {
         let init = State::new(num_workers);
 
@@ -165,6 +167,8 @@ impl State {
         ret
     }
 
+    // requires: *cell ↦ _
+    // ensures: __out.0 == cell.load(ordering)
     fn load(cell: &AtomicUsize, ordering: Ordering) -> State {
         State(cell.load(ordering))
     }
@@ -186,6 +190,8 @@ impl State {
     /// Track a sleeping worker
     ///
     /// Returns `true` if this is the final searching worker.
+    // requires: *cell ↦ _
+    // ensures: __out == (is_searching && State(old(cell.load(Ordering::SeqCst))).num_searching() == 1) ⋆ *cell ↦ _
     fn dec_num_unparked(cell: &AtomicUsize, is_searching: bool) -> bool {
         let mut dec = 1 << UNPARK_SHIFT;
 

@@ -13,6 +13,8 @@ pub(super) struct WakerRef<'a, S: 'static> {
 
 /// Returns a `WakerRef` which avoids having to preemptively increase the
 /// refcount if there is no need to do so.
+// requires: *header ↦ _
+// ensures: __out._p == PhantomData
 pub(super) fn waker_ref<S>(header: &NonNull<Header>) -> WakerRef<'_, S>
 where
     S: Schedule,
@@ -64,6 +66,8 @@ cfg_not_trace! {
     }
 }
 
+// requires: ptr as usize % std::mem::align_of::<Header>() == 0 && *ptr ↦ _
+// ensures: __out == raw_waker(NonNull::new_unchecked(ptr as *mut Header))
 unsafe fn clone_waker(ptr: *const ()) -> RawWaker {
     let header = NonNull::new_unchecked(ptr as *mut Header);
     trace!(header, "waker.clone");
@@ -96,6 +100,8 @@ unsafe fn wake_by_ref(ptr: *const ()) {
 static WAKER_VTABLE: RawWakerVTable =
     RawWakerVTable::new(clone_waker, wake_by_val, wake_by_ref, drop_waker);
 
+// requires: true
+// ensures: true
 fn raw_waker(header: NonNull<Header>) -> RawWaker {
     let ptr = header.as_ptr() as *const ();
     RawWaker::new(ptr, &WAKER_VTABLE)

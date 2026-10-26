@@ -51,6 +51,8 @@ pub(super) const MAX_DURATION: u64 = (1 << (6 * NUM_LEVELS)) - 1;
 
 impl Wheel {
     /// Creates a new timing wheel.
+    // requires: true
+    // ensures: __out.elapsed == 0 && SEPFORALL(0, 6, i, __out.levels[i] ↦ _)
     pub(crate) fn new() -> Wheel {
         Wheel {
             elapsed: 0,

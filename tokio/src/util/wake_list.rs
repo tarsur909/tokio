@@ -15,6 +15,8 @@ pub(crate) struct WakeList {
 }
 
 impl WakeList {
+    // requires: true
+    // ensures: __out.curr == 0 && SEPFORALL(0, NUM_WAKERS, i, __out.inner[i] ↦ _)
     pub(crate) fn new() -> Self {
         const UNINIT_WAKER: MaybeUninit<Waker> = MaybeUninit::uninit();
 

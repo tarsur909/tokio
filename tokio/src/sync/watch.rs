@@ -333,6 +333,8 @@ mod big_notify {
     }
 
     impl BigNotify {
+        // requires: true
+        // ensures: true
         pub(super) fn new() -> Self {
             Self {
                 #[cfg(not(all(
@@ -425,6 +427,8 @@ mod state {
     impl AtomicState {
         /// Create a new `AtomicState` that is not closed and which has the
         /// version set to `Version::INITIAL`.
+        // requires: true
+        // ensures: __out.0.load(Ordering::Relaxed) == Version::INITIAL.0 && __out.0.load(Ordering::Relaxed) & 1 == 0
         pub(super) fn new() -> Self {
             AtomicState(AtomicUsize::new(Version::INITIAL.0))
         }
@@ -493,6 +497,8 @@ mod state {
 ///
 /// [`Sender`]: struct@Sender
 /// [`Receiver`]: struct@Receiver
+// requires: true
+// ensures: Arc::ptr_eq(&__out.0.shared, &__out.1.shared)
 pub fn channel<T>(init: T) -> (Sender<T>, Receiver<T>) {
     let shared = Arc::new(Shared {
         value: RwLock::new(init),

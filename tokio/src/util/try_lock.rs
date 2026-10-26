@@ -43,6 +43,8 @@ impl<T> TryLock<T> {
     }
 
     /// Attempt to acquire lock
+    // requires: true
+    // ensures: (!old(self.locked.load(std::sync::atomic::Ordering::SeqCst)) ==> __out.is_some() && self.locked.load(std::sync::atomic::Ordering::SeqCst) == true) && (old(self.locked.load(std::sync::atomic::Ordering::SeqCst)) ==> __out.is_none() && self.locked.load(std::sync::atomic::Ordering::SeqCst) == true)
     pub(crate) fn try_lock(&self) -> Option<LockGuard<'_, T>> {
         if self
             .locked
@@ -68,6 +70,8 @@ impl<T> Deref for LockGuard<'_, T> {
 }
 
 impl<T> DerefMut for LockGuard<'_, T> {
+    // requires: true
+    // ensures: true
     fn deref_mut(&mut self) -> &mut T {
         unsafe { &mut *self.lock.data.get() }
     }

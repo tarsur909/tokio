@@ -21,16 +21,22 @@ where
     T: Future,
     S: 'static,
 {
+    // requires: ptr.as_ptr() as *mut Cell<T, S> != std::ptr::null_mut()
+    // ensures: __out.cell == ptr.cast()
     pub(super) unsafe fn from_raw(ptr: NonNull<Header>) -> Harness<T, S> {
         Harness {
             cell: ptr.cast::<Cell<T, S>>(),
         }
     }
 
+    // requires: true
+    // ensures: __out == self.cell.cast()
     fn header_ptr(&self) -> NonNull<Header> {
         self.cell.cast()
     }
 
+    // requires: std::ptr::eq(self.header_ptr().as_ptr(), self.header_ptr().as_ptr()) && *self.header_ptr().as_ptr() ↦ _
+    // ensures: *self.header_ptr().as_ptr() ↦ _ && std::ptr::eq(__out as *const Header, self.header_ptr().as_ptr())
     fn header(&self) -> &Header {
         unsafe { &*self.header_ptr().as_ptr() }
     }
@@ -339,6 +345,8 @@ where
 
     /// Releases the task from the scheduler. Returns the number of ref-counts
     /// that should be decremented.
+    // requires: true
+    // ensures: __out == 1 || __out == 2
     fn release(&self) -> usize {
         // We don't actually increment the ref-count here, but the new task is
         // never destroyed, so that's ok.
@@ -360,6 +368,8 @@ where
     /// task holds the task alive until after the use of `self`. Passing the
     /// returned Task to any method on `self` is unsound if dropping the Task
     /// could drop `self` before the call on `self` returned.
+    // requires: true
+    // ensures: true
     fn get_new_task(&self) -> Task<S> {
         // safety: The header is at the beginning of the cell, so this cast is
         // safe.
@@ -367,6 +377,8 @@ where
     }
 }
 
+// requires: true
+// ensures: true
 fn can_read_output(header: &Header, trailer: &Trailer, waker: &Waker) -> bool {
     // Load a snapshot of the current task state
     let snapshot = header.state.load();

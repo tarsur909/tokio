@@ -22,6 +22,8 @@ impl AtomicU32 {
     ///
     /// All mutations must have happened before the unsynchronized load.
     /// Additionally, there must be no concurrent mutations.
+    // requires: *self ↦ _
+    // ensures: __out == self.load(std::sync::atomic::Ordering::Relaxed)
     pub(crate) unsafe fn unsync_load(&self) -> u32 {
         // See <https://github.com/tokio-rs/tokio/issues/6155>
         self.load(std::sync::atomic::Ordering::Relaxed)
@@ -31,6 +33,8 @@ impl AtomicU32 {
 impl Deref for AtomicU32 {
     type Target = std::sync::atomic::AtomicU32;
 
+    // requires: true
+    // ensures: std::ptr::eq(__out as *const Self::Target, self.inner.get() as *const Self::Target)
     fn deref(&self) -> &Self::Target {
         // safety: it is always safe to access `&self` fns on the inner value as
         // we never perform unsafe mutations.

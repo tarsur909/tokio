@@ -32,10 +32,14 @@ pub(crate) struct SpawnerMetrics {
 }
 
 impl SpawnerMetrics {
+    // requires: true
+    // ensures: __out == self.num_threads.load(Ordering::Relaxed)
     fn num_threads(&self) -> usize {
         self.num_threads.load(Ordering::Relaxed)
     }
 
+    // requires: true
+    // ensures: __out == self.num_idle_threads.load(Ordering::Relaxed)
     fn num_idle_threads(&self) -> usize {
         self.num_idle_threads.load(Ordering::Relaxed)
     }
@@ -58,6 +62,8 @@ impl SpawnerMetrics {
         self.num_idle_threads.fetch_add(1, Ordering::Relaxed);
     }
 
+    // requires: *self ↦ _
+    // ensures: __out == old(self.num_idle_threads.load(Ordering::Relaxed)) && self.num_idle_threads.load(Ordering::Relaxed) == old(self.num_idle_threads.load(Ordering::Relaxed)) - 1
     fn dec_num_idle_threads(&self) -> usize {
         self.num_idle_threads.fetch_sub(1, Ordering::Relaxed)
     }
@@ -289,6 +295,8 @@ impl fmt::Debug for BlockingPool {
 
 impl Spawner {
     #[track_caller]
+    // requires: true
+    // ensures: true
     pub(crate) fn spawn_blocking<F, R>(&self, rt: &Handle, func: F) -> JoinHandle<R>
     where
         F: FnOnce() -> R + Send + 'static,

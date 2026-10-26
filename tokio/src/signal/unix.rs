@@ -222,6 +222,8 @@ pub(crate) struct SignalInfo {
 }
 
 impl Default for SignalInfo {
+    // requires: true
+    // ensures: true
     fn default() -> SignalInfo {
         SignalInfo {
             event_info: EventInfo::default(),

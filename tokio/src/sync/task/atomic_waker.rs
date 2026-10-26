@@ -139,6 +139,8 @@ const WAKING: usize = 0b10;
 
 impl AtomicWaker {
     /// Create an `AtomicWaker`
+    // requires: true
+    // ensures: __out.state ↦ _ && __out.waker ↦ _
     pub(crate) fn new() -> AtomicWaker {
         AtomicWaker {
             state: AtomicUsize::new(WAITING),
@@ -310,6 +312,8 @@ impl AtomicWaker {
 
     /// Attempts to take the `Waker` value out of the `AtomicWaker` with the
     /// intention that the caller will wake the task later.
+    // requires: true
+    // ensures: (self.state.fetch_or(WAKING, AcqRel) == WAITING && __out.is_some()) || (self.state.fetch_or(WAKING, AcqRel) != WAITING && __out.is_none())
     pub(crate) fn take_waker(&self) -> Option<Waker> {
         // AcqRel ordering is used in order to acquire the value of the `waker`
         // cell as well as to establish a `release` ordering with whatever

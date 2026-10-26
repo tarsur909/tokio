@@ -41,6 +41,8 @@ impl<T> Scoped<T> {
     }
 
     /// Gets the value out of the scoped cell;
+    // requires: true
+    // ensures: true
     pub(super) fn with<F, R>(&self, f: F) -> R
     where
         F: FnOnce(Option<&T>) -> R,

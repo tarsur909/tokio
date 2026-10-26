@@ -41,6 +41,8 @@ tokio_thread_local! {
 // ==== impl ParkThread ====
 
 impl ParkThread {
+    // requires: true
+    // ensures: __out.inner.state.load(std::sync::atomic::Ordering::Relaxed) == EMPTY
     pub(crate) fn new() -> Self {
         Self {
             inner: Arc::new(Inner {
@@ -288,6 +290,8 @@ impl CachedParkThread {
 }
 
 impl UnparkThread {
+    // requires: true
+    // ensures: true
     pub(crate) fn into_waker(self) -> Waker {
         unsafe {
             let raw = unparker_to_raw_waker(self.inner);
@@ -307,6 +311,8 @@ impl Inner {
     }
 }
 
+// requires: true
+// ensures: true
 unsafe fn unparker_to_raw_waker(unparker: Arc<Inner>) -> RawWaker {
     RawWaker::new(
         Inner::into_raw(unparker),
@@ -314,6 +320,8 @@ unsafe fn unparker_to_raw_waker(unparker: Arc<Inner>) -> RawWaker {
     )
 }
 
+// requires: true
+// ensures: true
 unsafe fn clone(raw: *const ()) -> RawWaker {
     Arc::increment_strong_count(raw as *const Inner);
     unparker_to_raw_waker(Inner::from_raw(raw))

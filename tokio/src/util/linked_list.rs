@@ -159,6 +159,8 @@ impl<L: Link> LinkedList<L, L::Target> {
 
     /// Removes the last element from a list and returns it, or None if it is
     /// empty.
+    // requires: self.head.is_none() && self.tail.is_none() || (self.head.is_some() && self.tail.is_some())
+    // ensures: __out.is_none() && self.head.is_none() && self.tail.is_none() || __out.is_some() && old(self.head).is_some() && old(self.tail).is_some()
     pub(crate) fn pop_back(&mut self) -> Option<L::Handle> {
         unsafe {
             let last = self.tail?;
@@ -197,6 +199,8 @@ impl<L: Link> LinkedList<L, L::Target> {
     /// - `node` is currently contained by some other `GuardedLinkedList` **and**
     ///   the caller has an exclusive access to that list. This condition is
     ///   used by the linked list in `sync::Notify`.
+    // requires: true
+    // ensures: __out.is_some() ==> (L::pointers(node).as_ref().get_next().is_none() && L::pointers(node).as_ref().get_prev().is_none())
     pub(crate) unsafe fn remove(&mut self, node: NonNull<L::Target>) -> Option<L::Handle> {
         if let Some(prev) = L::pointers(node).as_ref().get_prev() {
             debug_assert_eq!(L::pointers(prev).as_ref().get_next(), Some(node));
@@ -249,6 +253,8 @@ impl<L: Link> fmt::Debug for LinkedList<L, L::Target> {
     feature = "sync",
 ))]
 impl<L: Link> LinkedList<L, L::Target> {
+    // requires: true
+    // ensures: (self.tail.is_some() ==> __out.is_some()) && (self.tail.is_none() ==> __out.is_none())
     pub(crate) fn last(&self) -> Option<&L::Target> {
         let tail = self.tail.as_ref()?;
         unsafe { Some(&*tail.as_ptr()) }
@@ -420,6 +426,8 @@ feature! {
 
 impl<T> Pointers<T> {
     /// Create a new set of empty pointers
+    // requires: true
+    // ensures: __out.inner.get().addr() != 0
     pub(crate) fn new() -> Pointers<T> {
         Pointers {
             inner: UnsafeCell::new(PointersInner {
@@ -434,6 +442,8 @@ impl<T> Pointers<T> {
         // SAFETY: Field is accessed immutably through a reference.
         unsafe { ptr::addr_of!((*self.inner.get()).prev).read() }
     }
+    // requires: true
+    // ensures: true
     pub(crate) fn get_next(&self) -> Option<NonNull<T>> {
         // SAFETY: Field is accessed immutably through a reference.
         unsafe { ptr::addr_of!((*self.inner.get()).next).read() }

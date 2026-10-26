@@ -27,6 +27,8 @@ pub(super) struct Synced {
 }
 
 impl RegistrationSet {
+    // requires: true
+    // ensures: __out.0.num_pending_release.load(std::sync::atomic::Ordering::Relaxed) == 0 && __out.1.is_shutdown == false && __out.1.registrations.is_empty() && __out.1.pending_release.capacity() >= 16
     pub(super) fn new() -> (RegistrationSet, Synced) {
         let set = RegistrationSet {
             num_pending_release: AtomicUsize::new(0),
@@ -46,6 +48,8 @@ impl RegistrationSet {
     }
 
     /// Returns `true` if there are registrations that need to be released
+    // requires: true
+    // ensures: __out == (self.num_pending_release.load(Acquire) != 0)
     pub(super) fn needs_release(&self) -> bool {
         self.num_pending_release.load(Acquire) != 0
     }

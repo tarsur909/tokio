@@ -446,6 +446,8 @@ impl Notify {
     ///
     /// let notify = Notify::new();
     /// ```
+    // requires: true
+    // ensures: __out.state ↦ _ ⋆ __out.waiters ↦ _
     pub fn new() -> Notify {
         Notify {
             state: AtomicUsize::new(0),

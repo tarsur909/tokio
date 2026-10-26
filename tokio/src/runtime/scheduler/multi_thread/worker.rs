@@ -239,6 +239,8 @@ type Notified = task::Notified<Arc<Handle>>;
 /// improvements.
 const MAX_LIFO_POLLS_PER_TICK: usize = 3;
 
+// requires: true
+// ensures: __out.0.shared.remotes.len() == size && __out.1.0.len() == size
 pub(super) fn create(
     size: usize,
     park: Parker,
@@ -764,6 +766,8 @@ impl Core {
     }
 
     /// Return the next notified task available to this worker.
+    // requires: true
+    // ensures: __out.is_none() ==> (self.tick % self.global_queue_interval == 0 && worker.handle.next_remote_task().is_none() && self.next_local_task().is_none()) || (self.tick % self.global_queue_interval != 0 && worker.inject().is_empty() && self.next_local_task().is_none())
     fn next_task(&mut self, worker: &Worker) -> Option<Notified> {
         if self.tick % self.global_queue_interval == 0 {
             // Update the global queue interval, if needed
@@ -1088,6 +1092,8 @@ impl Handle {
         }
     }
 
+    // requires: true
+    // ensures: __out.is_none() == old(self.shared.inject.is_empty())
     fn next_remote_task(&self) -> Option<Notified> {
         if self.shared.inject.is_empty() {
             return None;

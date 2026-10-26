@@ -11,6 +11,8 @@ unsafe impl<T: Send> Send for AtomicCell<T> {}
 unsafe impl<T: Send> Sync for AtomicCell<T> {}
 
 impl<T> AtomicCell<T> {
+    // requires: true
+    // ensures: true
     pub(crate) fn new(data: Option<Box<T>>) -> AtomicCell<T> {
         AtomicCell {
             data: AtomicPtr::new(to_raw(data)),
@@ -35,6 +37,8 @@ fn to_raw<T>(data: Option<Box<T>>) -> *mut T {
     data.map_or(ptr::null_mut(), Box::into_raw)
 }
 
+// requires: val.is_null() || !val.is_null()
+// ensures: __out.is_none() && val.is_null() || __out.is_some() && !val.is_null()
 fn from_raw<T>(val: *mut T) -> Option<Box<T>> {
     if val.is_null() {
         None

@@ -489,6 +489,8 @@ impl Handle {
         self.shared.inject.pop()
     }
 
+    // requires: true
+    // ensures: true
     fn waker_ref(me: &Arc<Self>) -> WakerRef<'_> {
         // Set woken to true when enter block_on, ensure outer future
         // be polled for the first time when enter loop
@@ -497,6 +499,8 @@ impl Handle {
     }
 
     // reset woken to false and return original value
+    // requires: *self ↦ sep_v && sep_v.shared.woken ↦ sep_woken
+    // ensures: __out == old(self.shared.woken.load(std::sync::atomic::Ordering::Acquire)) && self.shared.woken.load(std::sync::atomic::Ordering::Acquire) == false
     pub(crate) fn reset_woken(&self) -> bool {
         self.shared.woken.swap(false, AcqRel)
     }

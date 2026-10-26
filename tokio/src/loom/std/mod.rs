@@ -36,6 +36,8 @@ pub(crate) mod rand {
 
     static COUNTER: AtomicU32 = AtomicU32::new(1);
 
+    // requires: true
+    // ensures: __out == __out
     pub(crate) fn seed() -> u64 {
         let rand_state = RandomState::new();
 

@@ -30,6 +30,8 @@ impl Deref for WakerRef<'_> {
 }
 
 /// Creates a reference to a `Waker` from a reference to `Arc<impl Wake>`.
+// requires: true
+// ensures: Arc::ptr_eq(wake, &Arc::clone(wake))
 pub(crate) fn waker_ref<W: Wake>(wake: &Arc<W>) -> WakerRef<'_> {
     let ptr = Arc::as_ptr(wake).cast::<()>();
 
@@ -50,6 +52,8 @@ fn waker_vtable<W: Wake>() -> &'static RawWakerVTable {
     )
 }
 
+// requires: true
+// ensures: true
 unsafe fn clone_arc_raw<T: Wake>(data: *const ()) -> RawWaker {
     Arc::<T>::increment_strong_count(data as *const T);
     RawWaker::new(data, waker_vtable::<T>())

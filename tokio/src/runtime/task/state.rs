@@ -93,6 +93,8 @@ pub(crate) enum TransitionToNotifiedByRef {
 /// unambiguous modification order.
 impl State {
     /// Returns a task's initial state.
+    // requires: true
+    // ensures: __out.val.load(std::sync::atomic::Ordering::Relaxed) == INITIAL_STATE
     pub(super) fn new() -> State {
         // The raw task returned by this method has a ref-count of three. See
         // the comment on INITIAL_STATE for more.
@@ -102,12 +104,16 @@ impl State {
     }
 
     /// Loads the current state, establishes `Acquire` ordering.
+    // requires: *self.val ↦ _
+    // ensures: *self.val ↦ _ && __out.0 == self.val.load(Acquire)
     pub(super) fn load(&self) -> Snapshot {
         Snapshot(self.val.load(Acquire))
     }
 
     /// Attempts to transition the lifecycle to `Running`. This sets the
     /// notified bit to false so notifications during the poll can be detected.
+    // requires: true
+    // ensures: true
     pub(super) fn transition_to_running(&self) -> TransitionToRunning {
         self.fetch_update_action(|mut next| {
             let action;
@@ -189,6 +195,8 @@ impl State {
     /// count the specified number of times.
     ///
     /// Returns true if the task should be deallocated.
+    // requires: self.val ↦ _ && FORALL(0, 1, i, self.val.load(std::sync::atomic::Ordering::Acquire) / REF_ONE >= count)
+    // ensures: __out == (old(self.val.load(std::sync::atomic::Ordering::Acquire) / REF_ONE) == count)
     pub(super) fn transition_to_terminal(&self, count: usize) -> bool {
         let prev = Snapshot(self.val.fetch_sub(count * REF_ONE, AcqRel));
         assert!(
@@ -206,6 +214,8 @@ impl State {
     ///
     /// If a task needs to be submitted, the ref-count is incremented for the
     /// new Notified.
+    // requires: true
+    // ensures: true
     pub(super) fn transition_to_notified_by_val(&self) -> TransitionToNotifiedByVal {
         self.fetch_update_action(|mut snapshot| {
             let action;
@@ -350,6 +360,8 @@ impl State {
 
     /// Optimistically tries to swap the state assuming the join handle is
     /// __immediately__ dropped on spawn.
+    // requires: true
+    // ensures: (__out.is_ok() ==> (self.val.load(std::sync::atomic::Ordering::Relaxed) == ((INITIAL_STATE - REF_ONE) & !JOIN_INTEREST))) && (__out.is_err() ==> true)
     pub(super) fn drop_join_handle_fast(&self) -> Result<(), ()> {
         use std::sync::atomic::Ordering::Relaxed;
 
@@ -375,6 +387,8 @@ impl State {
     ///
     /// Returns `Ok` if the operation happens before the task transitions to a
     /// completed state, `Err` otherwise.
+    // requires: true
+    // ensures: true
     pub(super) fn unset_join_interested(&self) -> UpdateResult {
         self.fetch_update(|curr| {
             assert!(curr.is_join_interested());
@@ -467,6 +481,8 @@ impl State {
         prev.ref_count() == 2
     }
 
+    // requires: true
+    // ensures: true
     fn fetch_update_action<F, T>(&self, mut f: F) -> T
     where
         F: FnMut(Snapshot) -> (T, Option<Snapshot>),
@@ -489,6 +505,8 @@ impl State {
         }
     }
 
+    // requires: true
+    // ensures: true
     fn fetch_update<F>(&self, mut f: F) -> Result<Snapshot, Snapshot>
     where
         F: FnMut(Snapshot) -> Option<Snapshot>,

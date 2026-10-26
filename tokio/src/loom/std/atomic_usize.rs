@@ -27,6 +27,8 @@ impl AtomicUsize {
         self.load(std::sync::atomic::Ordering::Relaxed)
     }
 
+    // requires: true
+    // ensures: true
     pub(crate) fn with_mut<R>(&mut self, f: impl FnOnce(&mut usize) -> R) -> R {
         // safety: we have mutable access
         f(unsafe { (*self.inner.get()).get_mut() })
@@ -36,6 +38,8 @@ impl AtomicUsize {
 impl ops::Deref for AtomicUsize {
     type Target = std::sync::atomic::AtomicUsize;
 
+    // requires: std::ptr::eq(self.inner.get() as *const Self::Target, self.inner.get() as *const Self::Target)
+    // ensures: std::ptr::eq(__out as *const Self::Target, self.inner.get() as *const Self::Target)
     fn deref(&self) -> &Self::Target {
         // safety: it is always safe to access `&self` fns on the inner value as
         // we never perform unsafe mutations.

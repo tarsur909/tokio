@@ -44,6 +44,8 @@ where
 {
     type Output = T;
 
+    // requires: true
+    // ensures: true
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<T> {
         // Safety: We never construct a `Pin<&mut F>` anywhere, so accessing `f`
         // mutably in an unpinned way is sound.

@@ -44,6 +44,8 @@ struct Shared {
 }
 
 impl Parker {
+    // requires: true
+    // ensures: __out.inner.state.load(std::sync::atomic::Ordering::Relaxed) == EMPTY && Arc::strong_count(&__out.inner) == 1 && Arc::strong_count(&__out.inner.shared) == 1
     pub(crate) fn new(driver: Driver) -> Parker {
         Parker {
             inner: Arc::new(Inner {
@@ -82,6 +84,8 @@ impl Parker {
 }
 
 impl Clone for Parker {
+    // requires: true
+    // ensures: __out.inner.state.load(std::sync::atomic::Ordering::Relaxed) == EMPTY && Arc::ptr_eq(&__out.inner.shared, &self.inner.shared)
     fn clone(&self) -> Parker {
         Parker {
             inner: Arc::new(Inner {

@@ -40,6 +40,8 @@ pub(crate) struct Handle {
 
 impl Driver {
     /// Creates a new signal `Driver` instance that delegates wakeups to `park`.
+    // requires: true
+    // ensures: __out.is_ok() ==> true
     pub(crate) fn new(io: io::Driver, io_handle: &io::Handle) -> std_io::Result<Self> {
         use std::mem::ManuallyDrop;
         use std::os::unix::io::{AsRawFd, FromRawFd};

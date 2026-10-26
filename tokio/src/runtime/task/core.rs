@@ -205,6 +205,8 @@ pub(super) enum Stage<T: Future> {
 impl<T: Future, S: Schedule> Cell<T, S> {
     /// Allocates a new task cell, containing the header, trailer, and core
     /// structures.
+    // requires: true
+    // ensures: true
     pub(super) fn new(future: T, scheduler: S, state: State, task_id: Id) -> Box<Cell<T, S>> {
         // Separated into a non-generic function to reduce LLVM codegen
         fn new_header(
@@ -365,6 +367,8 @@ impl<T: Future, S: Schedule> Core<T, S> {
     /// # Safety
     ///
     /// The caller must ensure it is safe to mutate the `stage` field.
+    // requires: matches!(self.stage.stage.with(|s| s), Stage::Finished(_))
+    // ensures: __out.is_ok()
     pub(super) fn take_output(&self) -> super::Result<T::Output> {
         use std::mem;
 
@@ -406,6 +410,8 @@ impl Header {
     /// # Safety
     ///
     /// The provided raw pointer must point at the header of a task.
+    // requires: me.as_ref().vtable.trailer_offset as usize <= usize::MAX - me.as_ptr() as usize
+    // ensures: __out.as_ptr() == (me.as_ptr() as *mut u8).add(me.as_ref().vtable.trailer_offset) as *mut Trailer
     pub(super) unsafe fn get_trailer(me: NonNull<Header>) -> NonNull<Trailer> {
         let offset = me.as_ref().vtable.trailer_offset;
         let trailer = me.as_ptr().cast::<u8>().add(offset).cast::<Trailer>();
@@ -420,6 +426,8 @@ impl Header {
     ///
     /// The generic type S must be set to the correct scheduler type for this
     /// task.
+    // requires: me.as_ref().vtable.scheduler_offset < usize::MAX
+    // ensures: __out.as_ptr() == (me.as_ptr() as *mut u8).add(me.as_ref().vtable.scheduler_offset) as *mut S
     pub(super) unsafe fn get_scheduler<S>(me: NonNull<Header>) -> NonNull<S> {
         let offset = me.as_ref().vtable.scheduler_offset;
         let scheduler = me.as_ptr().cast::<u8>().add(offset).cast::<S>();
@@ -431,6 +439,8 @@ impl Header {
     /// # Safety
     ///
     /// The provided raw pointer must point at the header of a task.
+    // requires: true
+    // ensures: __out.as_ptr() == (me.as_ptr() as *mut u8).add(me.as_ref().vtable.id_offset) as *mut Id
     pub(super) unsafe fn get_id_ptr(me: NonNull<Header>) -> NonNull<Id> {
         let offset = me.as_ref().vtable.id_offset;
         let id = me.as_ptr().cast::<u8>().add(offset).cast::<Id>();
@@ -442,6 +452,8 @@ impl Header {
     /// # Safety
     ///
     /// The provided raw pointer must point at the header of a task.
+    // requires: true
+    // ensures: __out == Header::get_id_ptr(me).as_ptr().read()
     pub(super) unsafe fn get_id(me: NonNull<Header>) -> Id {
         let ptr = Header::get_id_ptr(me).as_ptr();
         *ptr
@@ -459,6 +471,8 @@ impl Header {
 }
 
 impl Trailer {
+    // requires: true
+    // ensures: __out.waker ↦ _ ⋆ __out.owned ↦ _
     fn new() -> Self {
         Trailer {
             waker: UnsafeCell::new(None),

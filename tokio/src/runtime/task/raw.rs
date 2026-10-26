@@ -44,6 +44,8 @@ pub(super) struct Vtable {
 }
 
 /// Get the vtable for the requested `T` and `S` generics.
+// requires: true
+// ensures: true
 pub(super) fn vtable<T: Future, S: Schedule>() -> &'static Vtable {
     &Vtable {
         poll: poll::<T, S>,
@@ -157,6 +159,8 @@ const fn get_id_offset(
 }
 
 impl RawTask {
+    // requires: true
+    // ensures: __out.ptr.as_ptr() as usize > 0
     pub(super) fn new<T, S>(task: T, scheduler: S, id: Id) -> RawTask
     where
         T: Future,
@@ -168,10 +172,14 @@ impl RawTask {
         RawTask { ptr }
     }
 
+    // requires: true
+    // ensures: __out.ptr == ptr
     pub(super) unsafe fn from_raw(ptr: NonNull<Header>) -> RawTask {
         RawTask { ptr }
     }
 
+    // requires: true
+    // ensures: __out == self.ptr
     pub(super) fn header_ptr(&self) -> NonNull<Header> {
         self.ptr
     }

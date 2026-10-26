@@ -42,6 +42,8 @@ pub(crate) enum TryPopResult<T> {
     Busy,
 }
 
+// requires: true
+// ensures: __out.0.block_tail.load(std::sync::atomic::Ordering::Relaxed) == __out.1.head.as_ptr() && __out.1.index == 0 && __out.1.free_head == __out.1.head
 pub(crate) fn channel<T>() -> (Tx<T>, Rx<T>) {
     // Create the initial block shared between the tx and rx halves.
     let initial_block = Block::new(0);
@@ -93,6 +95,8 @@ impl<T> Tx<T> {
         unsafe { block.as_ref().tx_close() }
     }
 
+    // requires: true
+    // ensures: true
     fn find_block(&self, slot_index: usize) -> NonNull<Block<T>> {
         // The start index of the block that contains `index`.
         let start_index = block::start_index(slot_index);
@@ -239,6 +243,8 @@ impl<T> fmt::Debug for Tx<T> {
 }
 
 impl<T> Rx<T> {
+    // requires: *self ↦ _ ⋆ *tx ↦ _
+    // ensures: __out == (self.len(tx) == 0)
     pub(crate) fn is_empty(&self, tx: &Tx<T>) -> bool {
         let block = unsafe { self.head.as_ref() };
         if block.has_value(self.index) {
@@ -250,6 +256,8 @@ impl<T> Rx<T> {
         self.len(tx) == 0
     }
 
+    // requires: *self ↦ _ ⋆ *tx ↦ _ ⋆ *tx.tail_position ↦ _
+    // ensures: __out == tx.tail_position.load(Acquire) - self.index - (tx.is_closed() as usize)
     pub(crate) fn len(&self, tx: &Tx<T>) -> usize {
         // When all the senders are dropped, there will be a last block in the tail position,
         // but it will be closed
@@ -287,6 +295,8 @@ impl<T> Rx<T> {
     /// This can happen if the fully delivered message is behind another message
     /// that is in the middle of being written to the block, since the channel
     /// can't return the messages out of order.
+    // requires: *self ↦ _ ⋆ *tx ↦ _
+    // ensures: true
     pub(crate) fn try_pop(&mut self, tx: &Tx<T>) -> TryPopResult<T> {
         let tail_position = tx.tail_position.load(Acquire);
         let result = self.pop(tx);
@@ -302,6 +312,8 @@ impl<T> Rx<T> {
     /// Tries advancing the block pointer to the block referenced by `self.index`.
     ///
     /// Returns `true` if successful, `false` if there is no next block to load.
+    // requires: true
+    // ensures: true
     fn try_advancing_head(&mut self) -> bool {
         let block_index = block::start_index(self.index);
 

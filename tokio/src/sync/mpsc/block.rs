@@ -92,6 +92,8 @@ generate_addr_of_methods! {
 }
 
 impl<T> Block<T> {
+    // requires: true
+    // ensures: *__out ↦ _ && (*__out).header.start_index == start_index
     pub(crate) fn new(start_index: usize) -> Box<Block<T>> {
         unsafe {
             // Allocate the block on the heap.
@@ -168,14 +170,19 @@ impl<T> Block<T> {
         Some(Read::Value(value.assume_init()))
     }
 
-    /// Returns true if there is a value in the slot to be consumed
+    /// Returns true if *this* block has a value in the given slot.
     ///
-    /// # Safety
-    ///
-    /// To maintain safety, the caller must ensure:
-    ///
-    /// * No concurrent access to the slot.
+    /// Always returns false when given an index from a different block.
+    // requires: *self ↦ _ && slot_index >= 0
+    // ensures: __out == (slot_index >= self.header.start_index && slot_index < self.header.start_index + super::BLOCK_CAP && is_ready(self.header.ready_slots.load(Ordering::Acquire), offset(slot_index)))
     pub(crate) fn has_value(&self, slot_index: usize) -> bool {
+        if slot_index < self.header.start_index {
+            return false;
+        }
+        if slot_index >= self.header.start_index + super::BLOCK_CAP {
+            return false;
+        }
+
         let offset = offset(slot_index);
         let ready_bits = self.header.ready_slots.load(Acquire);
         is_ready(ready_bits, offset)
@@ -208,6 +215,8 @@ impl<T> Block<T> {
         self.header.ready_slots.fetch_or(TX_CLOSED, Release);
     }
 
+    // requires: true
+    // ensures: __out == is_tx_closed(self.header.ready_slots.load(Acquire))
     pub(crate) unsafe fn is_closed(&self) -> bool {
         let ready_bits = self.header.ready_slots.load(Acquire);
         is_tx_closed(ready_bits)
@@ -261,6 +270,8 @@ impl<T> Block<T> {
     ///
     /// This indicates that the block is in its final state and will no longer
     /// be mutated.
+    // requires: *self.header.ready_slots ↦ _
+    // ensures: *self.header.ready_slots ↦ _ && __out == (self.header.ready_slots.load(Ordering::Acquire) & READY_MASK == READY_MASK)
     pub(crate) fn is_final(&self) -> bool {
         self.header.ready_slots.load(Acquire) & READY_MASK == READY_MASK
     }
@@ -279,6 +290,8 @@ impl<T> Block<T> {
     }
 
     /// Loads the next block
+    // requires: true
+    // ensures: __out == NonNull::new(self.header.next.load(ordering))
     pub(crate) fn load_next(&self, ordering: Ordering) -> Option<NonNull<Block<T>>> {
         let ret = NonNull::new(self.header.next.load(ordering));
 
@@ -307,6 +320,8 @@ impl<T> Block<T> {
     /// To maintain safety, the caller must ensure:
     ///
     /// * `block` is not freed until it has been removed from the list.
+    // requires: true
+    // ensures: (__out.is_ok() ==> self.header.next.load(Ordering::SeqCst) == block.as_ptr()) && (__out.is_err() ==> __out.unwrap_err().as_ptr() == self.header.next.load(Ordering::SeqCst))
     pub(crate) unsafe fn try_push(
         &self,
         block: &mut NonNull<Block<T>>,

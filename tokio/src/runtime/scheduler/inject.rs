@@ -60,6 +60,8 @@ impl<T: 'static> Inject<T> {
         unsafe { self.shared.push(&mut synced, task) }
     }
 
+    // requires: true
+    // ensures: (self.shared.is_empty() ==> __out.is_none()) && (!self.shared.is_empty() ==> __out.is_some())
     pub(crate) fn pop(&self) -> Option<task::Notified<T>> {
         if self.shared.is_empty() {
             return None;

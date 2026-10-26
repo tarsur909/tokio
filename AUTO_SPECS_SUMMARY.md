@@ -1,0 +1,382 @@
+# Specs found
+
+- **tokio/src/future/poll_fn.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `true`
+- **tokio/src/loom/std/atomic_u32.rs**
+  - requires:
+    - `*self ↦ _`
+    - `true`
+  - ensures:
+    - `__out == self.load(std::sync::atomic::Ordering::Relaxed)`
+    - `std::ptr::eq(__out as *const Self::Target, self.inner.get() as *const Self::Target)`
+- **tokio/src/loom/std/atomic_usize.rs**
+  - requires:
+    - `std::ptr::eq(self.inner.get() as *const Self::Target, self.inner.get() as *const Self::Target)`
+    - `true`
+  - ensures:
+    - `std::ptr::eq(__out as *const Self::Target, self.inner.get() as *const Self::Target)`
+    - `true`
+- **tokio/src/loom/std/mod.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `__out == __out`
+- **tokio/src/runtime/blocking/pool.rs**
+  - requires:
+    - `*self ↦ _`
+    - `true`
+  - ensures:
+    - `__out == old(self.num_idle_threads.load(Ordering::Relaxed)) && self.num_idle_threads.load(Ordering::Relaxed) == old(self.num_idle_threads.load(Ordering::Relaxed)) - 1`
+    - `__out == self.num_idle_threads.load(Ordering::Relaxed)`
+    - `__out == self.num_threads.load(Ordering::Relaxed)`
+    - `true`
+- **tokio/src/runtime/context/scoped.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `true`
+- **tokio/src/runtime/io/registration_set.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `__out == (self.num_pending_release.load(Acquire) != 0)`
+    - `__out.0.num_pending_release.load(std::sync::atomic::Ordering::Relaxed) == 0 && __out.1.is_shutdown == false && __out.1.registrations.is_empty() && __out.1.pending_release.capacity() >= 16`
+- **tokio/src/runtime/park.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `__out.inner.state.load(std::sync::atomic::Ordering::Relaxed) == EMPTY`
+    - `true`
+- **tokio/src/runtime/scheduler/current_thread/mod.rs**
+  - requires:
+    - `*self ↦ sep_v && sep_v.shared.woken ↦ sep_woken`
+    - `true`
+  - ensures:
+    - `__out == old(self.shared.woken.load(std::sync::atomic::Ordering::Acquire)) && self.shared.woken.load(std::sync::atomic::Ordering::Acquire) == false`
+    - `true`
+- **tokio/src/runtime/scheduler/inject.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `(self.shared.is_empty() ==> __out.is_none()) && (!self.shared.is_empty() ==> __out.is_some())`
+- **tokio/src/runtime/scheduler/inject/shared.rs**
+  - requires:
+    - `*self.len ↦ _`
+    - `true`
+  - ensures:
+    - `*self.len ↦ _ && __out == self.len.load(std::sync::atomic::Ordering::Acquire)`
+    - `__out.0.len.load(std::sync::atomic::Ordering::Relaxed) == 0 && !__out.1.is_closed && __out.1.head.is_none() && __out.1.tail.is_none()`
+- **tokio/src/runtime/scheduler/multi_thread/idle.rs**
+  - requires:
+    - `*cell ↦ _`
+    - `true`
+  - ensures:
+    - `__out == (is_searching && State(old(cell.load(Ordering::SeqCst))).num_searching() == 1) ⋆ *cell ↦ _`
+    - `__out.0 == cell.load(ordering)`
+    - `__out.0.state.load(Ordering::Acquire) == State::new(num_workers).into() && __out.0.num_workers == num_workers && __out.1.sleepers.len() == 0`
+- **tokio/src/runtime/scheduler/multi_thread/park.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `__out.inner.state.load(std::sync::atomic::Ordering::Relaxed) == EMPTY && Arc::ptr_eq(&__out.inner.shared, &self.inner.shared)`
+    - `__out.inner.state.load(std::sync::atomic::Ordering::Relaxed) == EMPTY && Arc::strong_count(&__out.inner) == 1 && Arc::strong_count(&__out.inner.shared) == 1`
+- **tokio/src/runtime/scheduler/multi_thread/queue.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `(__out.is_some() ==> dst.inner.tail.load(Acquire) > old(dst.inner.tail.load(Acquire))) && (__out.is_none() ==> dst.inner.tail.load(Acquire) == old(dst.inner.tail.load(Acquire)))`
+    - `Arc::ptr_eq(&__out.0 .0, &__out.1 .inner)`
+    - `__out == 0 || (__out > 0 && __out <= (LOCAL_QUEUE_CAPACITY as UnsignedShort / 2))`
+    - `__out == self.tail.load(Acquire).wrapping_sub(unpack(self.head.load(Acquire)).1)`
+    - `__out.is_none() || __out.is_some()`
+- **tokio/src/runtime/scheduler/multi_thread/worker.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `__out.0.shared.remotes.len() == size && __out.1.0.len() == size`
+    - `__out.is_none() == old(self.shared.inject.is_empty())`
+    - `__out.is_none() ==> (self.tick % self.global_queue_interval == 0 && worker.handle.next_remote_task().is_none() && self.next_local_task().is_none()) || (self.tick % self.global_queue_interval != 0 && worker.inject().is_empty() && self.next_local_task().is_none())`
+- **tokio/src/runtime/signal/mod.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `__out.is_ok() ==> true`
+- **tokio/src/runtime/task/core.rs**
+  - requires:
+    - `matches!(self.stage.stage.with(|s| s), Stage::Finished(_))`
+    - `me.as_ref().vtable.scheduler_offset < usize::MAX`
+    - `me.as_ref().vtable.trailer_offset as usize <= usize::MAX - me.as_ptr() as usize`
+    - `true`
+  - ensures:
+    - `__out == Header::get_id_ptr(me).as_ptr().read()`
+    - `__out.as_ptr() == (me.as_ptr() as *mut u8).add(me.as_ref().vtable.id_offset) as *mut Id`
+    - `__out.as_ptr() == (me.as_ptr() as *mut u8).add(me.as_ref().vtable.scheduler_offset) as *mut S`
+    - `__out.as_ptr() == (me.as_ptr() as *mut u8).add(me.as_ref().vtable.trailer_offset) as *mut Trailer`
+    - `__out.is_ok()`
+    - `__out.waker ↦ _ ⋆ __out.owned ↦ _`
+    - `true`
+- **tokio/src/runtime/task/harness.rs**
+  - requires:
+    - `ptr.as_ptr() as *mut Cell<T, S> != std::ptr::null_mut()`
+    - `std::ptr::eq(self.header_ptr().as_ptr(), self.header_ptr().as_ptr()) && *self.header_ptr().as_ptr() ↦ _`
+    - `true`
+  - ensures:
+    - `*self.header_ptr().as_ptr() ↦ _ && std::ptr::eq(__out as *const Header, self.header_ptr().as_ptr())`
+    - `__out == 1 || __out == 2`
+    - `__out == self.cell.cast()`
+    - `__out.cell == ptr.cast()`
+    - `true`
+- **tokio/src/runtime/task/id.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `__out.0 > 0`
+- **tokio/src/runtime/task/join.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `true`
+- **tokio/src/runtime/task/list.rs**
+  - requires:
+    - `self.closed ↦ _ && task.header().owner_id ↦ _`
+    - `task.header().get_owner_id().is_none() || (task.header().get_owner_id().is_some() && task.header().get_owner_id().unwrap() == self.id)`
+    - `true`
+  - ensures:
+    - `(task.header().get_owner_id().is_none() ==> __out.is_none()) && (task.header().get_owner_id().is_some() && task.header().get_owner_id().unwrap() == self.id ==> __out.is_some())`
+    - `__out.is_none() == self.closed.load(Ordering::Acquire)`
+    - `true`
+- **tokio/src/runtime/task/mod.rs**
+  - requires:
+    - `Header::get_id(target).0 as usize == Header::get_id(target).0 as usize`
+    - `true`
+  - ensures:
+    - `__out == Header::get_id(target).0 as usize`
+    - `__out == handle.raw.header_ptr()`
+    - `__out == self.raw.header_ptr()`
+    - `__out == self::core::Trailer::addr_of_owned(Header::get_trailer(target))`
+    - `true`
+- **tokio/src/runtime/task/raw.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `__out == self.ptr`
+    - `__out.ptr == ptr`
+    - `__out.ptr.as_ptr() as usize > 0`
+    - `true`
+- **tokio/src/runtime/task/state.rs**
+  - requires:
+    - `*self.val ↦ _`
+    - `self.val ↦ _ && FORALL(0, 1, i, self.val.load(std::sync::atomic::Ordering::Acquire) / REF_ONE >= count)`
+    - `true`
+  - ensures:
+    - `(__out.is_ok() ==> (self.val.load(std::sync::atomic::Ordering::Relaxed) == ((INITIAL_STATE - REF_ONE) & !JOIN_INTEREST))) && (__out.is_err() ==> true)`
+    - `*self.val ↦ _ && __out.0 == self.val.load(Acquire)`
+    - `__out == (old(self.val.load(std::sync::atomic::Ordering::Acquire) / REF_ONE) == count)`
+    - `__out.val.load(std::sync::atomic::Ordering::Relaxed) == INITIAL_STATE`
+    - `true`
+- **tokio/src/runtime/task/waker.rs**
+  - requires:
+    - `*header ↦ _`
+    - `ptr as usize % std::mem::align_of::<Header>() == 0 && *ptr ↦ _`
+    - `true`
+  - ensures:
+    - `__out == raw_waker(NonNull::new_unchecked(ptr as *mut Header))`
+    - `__out._p == PhantomData`
+    - `true`
+- **tokio/src/runtime/time/entry.rs**
+  - requires:
+    - `*handle ↦ _`
+    - `self.cached_when ↦ _ ⋆ *self ↦ _`
+    - `self.inner.as_ref() as *const _ as usize != 0`
+    - `self.state ↦ _`
+    - `true`
+  - ensures:
+    - `(__out == (self.state.load(Ordering::Relaxed) != u64::MAX))`
+    - `(__out.is_ok() ==> self.inner.as_ref().cached_when() == u64::MAX) && (__out.is_err() ==> self.inner.as_ref().cached_when() == __out.unwrap_err())`
+    - `(__out.is_ok() ==> self.state.load(Ordering::Relaxed) == STATE_PENDING_FIRE) && (__out.is_err() ==> __out.unwrap_err() == self.state.load(Ordering::Relaxed) && __out.unwrap_err() > not_after)`
+    - `(self.state.load(Ordering::Acquire) == STATE_DEREGISTERED ==> __out.is_ready()) && (self.state.load(Ordering::Acquire) != STATE_DEREGISTERED ==> __out.is_pending())`
+    - `__out == None && self.state.load(Ordering::Relaxed) == STATE_DEREGISTERED || __out == Some(self.state.load(Ordering::Relaxed)) && self.state.load(Ordering::Relaxed) != STATE_DEREGISTERED`
+    - `__out == Ok(()) && self.state.load(Ordering::Relaxed) == new_timestamp || __out == Err(())`
+    - `__out == TimerShared::addr_of_pointers(target)`
+    - `__out == handle.inner`
+    - `__out == self.cached_when.load(Ordering::Relaxed)`
+    - `__out == self.inner.as_ref().cached_when()`
+    - `__out == self.true_when() && self.cached_when.load(Ordering::Relaxed) == __out`
+    - `__out.inner == ptr`
+    - `true`
+- **tokio/src/runtime/time/mod.rs**
+  - requires:
+    - `shards > 0`
+    - `true`
+  - ensures:
+    - `__out == self.inner.lock_sharded_wheel(id).poll_at()`
+    - `__out == self.is_shutdown.load(Ordering::SeqCst)`
+    - `__out.0.load(std::sync::atomic::Ordering::Relaxed) == val.map_or(0, NonZeroU64::get)`
+    - `__out.1.inner.wheels.len() == shards as usize && __out.1.inner.is_shutdown.load(std::sync::atomic::Ordering::SeqCst) == false`
+    - `true`
+- **tokio/src/runtime/time/wheel/mod.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `__out.elapsed == 0 && SEPFORALL(0, 6, i, __out.levels[i] ↦ _)`
+- **tokio/src/signal/registry.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `__out.pending.load(std::sync::atomic::Ordering::Relaxed) == false`
+- **tokio/src/signal/unix.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `true`
+- **tokio/src/sync/batch_semaphore.rs**
+  - requires:
+    - `*handle ↦ _`
+    - `*self.permits ↦ _`
+    - `*self.state ↦ _ && *n ↦ _`
+    - `permits <= Self::MAX_PERMITS`
+    - `self.permits ↦ _ && num_permits <= Self::MAX_PERMITS`
+    - `true`
+  - ensures:
+    - `(__out == Ok(())) ==> (self.permits.load(Acquire) == old(self.permits.load(Acquire)) - (num_permits << Self::PERMIT_SHIFT)) && (__out == Err(TryAcquireError::Closed)) ==> (old(self.permits.load(Acquire)) & Self::CLOSED == Self::CLOSED) && (__out == Err(TryAcquireError::NoPermits)) ==> (old(self.permits.load(Acquire)) < (num_permits << Self::PERMIT_SHIFT))`
+    - `*self.permits ↦ _ && __out == (self.permits.load(Acquire) >> Self::PERMIT_SHIFT)`
+    - `*self.permits ↦ _ && __out == (self.permits.load(std::sync::atomic::Ordering::Acquire) & Self::CLOSED == Self::CLOSED)`
+    - `__out == (self.state.load(std::sync::atomic::Ordering::Acquire) == 0) && *n ↦ old(*n) - (old(self.state.load(std::sync::atomic::Ordering::Acquire)) - self.state.load(std::sync::atomic::Ordering::Acquire))`
+    - `__out == *handle`
+    - `__out == Waiter::addr_of_pointers(target)`
+    - `__out == ptr`
+    - `__out.permits.load(std::sync::atomic::Ordering::Relaxed) == permits << Self::PERMIT_SHIFT && __out.waiters.lock().closed == false`
+    - `__out.state.load(std::sync::atomic::Ordering::SeqCst) == num_permits`
+    - `true`
+- **tokio/src/sync/mpsc/block.rs**
+  - requires:
+    - `*self ↦ _ && slot_index >= 0`
+    - `*self.header.ready_slots ↦ _`
+    - `true`
+  - ensures:
+    - `(__out.is_ok() ==> self.header.next.load(Ordering::SeqCst) == block.as_ptr()) && (__out.is_err() ==> __out.unwrap_err().as_ptr() == self.header.next.load(Ordering::SeqCst))`
+    - `*__out ↦ _ && (*__out).header.start_index == start_index`
+    - `*self.header.ready_slots ↦ _ && __out == (self.header.ready_slots.load(Ordering::Acquire) & READY_MASK == READY_MASK)`
+    - `__out == (slot_index >= self.header.start_index && slot_index < self.header.start_index + super::BLOCK_CAP && is_ready(self.header.ready_slots.load(Ordering::Acquire), offset(slot_index)))`
+    - `__out == NonNull::new(self.header.next.load(ordering))`
+    - `__out == is_tx_closed(self.header.ready_slots.load(Acquire))`
+- **tokio/src/sync/mpsc/chan.rs**
+  - requires:
+    - `*self ↦ _`
+    - `*self ↦ sep_v && sep_v.inner.rx_fields.get().is_some() && sep_v.inner.tx.is_some()`
+    - `*self.0 ↦ _`
+    - `Arc::strong_count(&self.inner) > 0`
+    - `true`
+  - ensures:
+    - `*self ↦ _`
+    - `*self.0 ↦ _ && __out == (self.0.load(std::sync::atomic::Ordering::Acquire) & 1 == 1)`
+    - `*self.0 ↦ _ && __out == (self.0.load(std::sync::atomic::Ordering::Acquire) >> 1 == 0)`
+    - `__out == (self.inner.semaphore.is_closed() || self.inner.tx_count.load(std::sync::atomic::Ordering::Acquire) == 0)`
+    - `__out == Ready(0usize) && limit == 0 || (limit > 0 && (__out == Pending || (__out == Ready(buffer.len() - old(buffer.len())) && buffer.len() - old(buffer.len()) <= limit && buffer.len() >= old(buffer.len()))))`
+    - `__out.inner.tx_count.load(Relaxed) == old(self.inner.tx_count.load(Relaxed)) + 1 && Arc::ptr_eq(&__out.inner, &self.inner)`
+    - `__out.is_ok() || matches!(__out, Err(TryRecvError::Disconnected)) || matches!(__out, Err(TryRecvError::Empty))`
+    - `__out.is_ready() || __out.is_pending()`
+    - `true`
+- **tokio/src/sync/mpsc/list.rs**
+  - requires:
+    - `*self ↦ _ ⋆ *tx ↦ _`
+    - `*self ↦ _ ⋆ *tx ↦ _ ⋆ *tx.tail_position ↦ _`
+    - `true`
+  - ensures:
+    - `__out == (self.len(tx) == 0)`
+    - `__out == tx.tail_position.load(Acquire) - self.index - (tx.is_closed() as usize)`
+    - `__out.0.block_tail.load(std::sync::atomic::Ordering::Relaxed) == __out.1.head.as_ptr() && __out.1.index == 0 && __out.1.free_head == __out.1.head`
+    - `true`
+- **tokio/src/sync/mpsc/unbounded.rs**
+  - requires:
+    - `self.chan.semaphore().0 ↦ _ && (self.chan.semaphore().0.load(std::sync::atomic::Ordering::Acquire) & 1 == 0)`
+    - `true`
+  - ensures:
+    - `__out == true ==> (self.chan.semaphore().0.load(std::sync::atomic::Ordering::Acquire) & 1 == 0) && __out == false ==> (self.chan.semaphore().0.load(std::sync::atomic::Ordering::Acquire) & 1 == 1)`
+    - `true`
+- **tokio/src/sync/notify.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `__out.state ↦ _ ⋆ __out.waiters ↦ _`
+- **tokio/src/sync/oneshot.rs**
+  - requires:
+    - `*cell ↦ _`
+    - `*self ↦ sep_v && sep_v.state ↦ state_val && State::set_complete(&state_val).is_closed() == false`
+    - `*this ↦ _`
+    - `true`
+  - ensures:
+    - `(__out.is_ready() && (State::load(&self.state, Acquire).is_complete() || State::load(&self.state, Acquire).is_closed())) || (__out.is_pending() && !State::load(&self.state, Acquire).is_complete() && !State::load(&self.state, Acquire).is_closed())`
+    - `*cell ↦ _ && __out.0 == (cell.load(Ordering::Acquire) | RX_TASK_SET)`
+    - `*cell ↦ _ && __out.0 == cell.load(order)`
+    - `*this ↦ _ && __out == this.with_mut(|v| *v)`
+    - `Arc::ptr_eq(&__out.0.inner.as_ref().unwrap(), &__out.1.inner.as_ref().unwrap())`
+    - `__out == true && State::set_complete(&self.state).is_closed() == false`
+    - `true`
+- **tokio/src/sync/task/atomic_waker.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `(self.state.fetch_or(WAKING, AcqRel) == WAITING && __out.is_some()) || (self.state.fetch_or(WAKING, AcqRel) != WAITING && __out.is_none())`
+    - `__out.state ↦ _ && __out.waker ↦ _`
+- **tokio/src/sync/watch.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `Arc::ptr_eq(&__out.0.shared, &__out.1.shared)`
+    - `__out.0.load(Ordering::Relaxed) == Version::INITIAL.0 && __out.0.load(Ordering::Relaxed) & 1 == 0`
+    - `true`
+- **tokio/src/util/atomic_cell.rs**
+  - requires:
+    - `true`
+    - `val.is_null() || !val.is_null()`
+  - ensures:
+    - `__out.is_none() && val.is_null() || __out.is_some() && !val.is_null()`
+    - `true`
+- **tokio/src/util/linked_list.rs**
+  - requires:
+    - `self.head.is_none() && self.tail.is_none() || (self.head.is_some() && self.tail.is_some())`
+    - `true`
+  - ensures:
+    - `(self.tail.is_some() ==> __out.is_some()) && (self.tail.is_none() ==> __out.is_none())`
+    - `__out.inner.get().addr() != 0`
+    - `__out.is_none() && self.head.is_none() && self.tail.is_none() || __out.is_some() && old(self.head).is_some() && old(self.tail).is_some()`
+    - `__out.is_some() ==> (L::pointers(node).as_ref().get_next().is_none() && L::pointers(node).as_ref().get_prev().is_none())`
+    - `true`
+- **tokio/src/util/once_cell.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `std::ptr::eq(__out as *const T, self.value.get() as *const T)`
+- **tokio/src/util/sharded_list.rs**
+  - requires:
+    - `*(&self.count as *const AtomicUsize) ↦ _`
+    - `sharded_size.is_power_of_two() && sharded_size > 0`
+    - `true`
+  - ensures:
+    - `(__out.is_some() ==> old(self.count.load(Ordering::Relaxed)) == self.count.load(Ordering::Relaxed) + 1) && (__out.is_none() ==> old(self.count.load(Ordering::Relaxed)) == self.count.load(Ordering::Relaxed))`
+    - `(__out.is_some() ==> self.count.load(std::sync::atomic::Ordering::Relaxed) == old(self.count.load(std::sync::atomic::Ordering::Relaxed)) - 1) && (__out.is_none() ==> self.count.load(std::sync::atomic::Ordering::Relaxed) == old(self.count.load(std::sync::atomic::Ordering::Relaxed)))`
+    - `__out == self.count.load(Ordering::Relaxed) && *(&self.count as *const AtomicUsize) ↦ _`
+    - `__out.shard_mask == sharded_size - 1 && __out.count.load(Ordering::Relaxed) == 0 && SEPFORALL(0, sharded_size, i, __out.lists[i] ↦ _)`
+    - `std::ptr::eq(__out.count, &self.count)`
+    - `true`
+- **tokio/src/util/try_lock.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `(!old(self.locked.load(std::sync::atomic::Ordering::SeqCst)) ==> __out.is_some() && self.locked.load(std::sync::atomic::Ordering::SeqCst) == true) && (old(self.locked.load(std::sync::atomic::Ordering::SeqCst)) ==> __out.is_none() && self.locked.load(std::sync::atomic::Ordering::SeqCst) == true)`
+    - `true`
+- **tokio/src/util/wake.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `Arc::ptr_eq(wake, &Arc::clone(wake))`
+    - `true`
+- **tokio/src/util/wake_list.rs**
+  - requires:
+    - `true`
+  - ensures:
+    - `__out.curr == 0 && SEPFORALL(0, NUM_WAKERS, i, __out.inner[i] ↦ _)`

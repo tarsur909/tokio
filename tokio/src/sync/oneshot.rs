@@ -408,6 +408,8 @@ impl Task {
         self.with_task(|w| w.will_wake(cx.waker()))
     }
 
+    // requires: true
+    // ensures: true
     unsafe fn with_task<F, R>(&self, f: F) -> R
     where
         F: FnOnce(&Waker) -> R,
@@ -467,6 +469,8 @@ struct State(usize);
 /// }
 /// ```
 #[track_caller]
+// requires: true
+// ensures: Arc::ptr_eq(&__out.0.inner.as_ref().unwrap(), &__out.1.inner.as_ref().unwrap())
 pub fn channel<T>() -> (Sender<T>, Receiver<T>) {
     #[cfg(all(tokio_unstable, feature = "tracing"))]
     let resource_span = {
@@ -1122,6 +1126,8 @@ impl<T> Future for Receiver<T> {
 }
 
 impl<T> Inner<T> {
+    // requires: *self ↦ sep_v && sep_v.state ↦ state_val && State::set_complete(&state_val).is_closed() == false
+    // ensures: __out == true && State::set_complete(&self.state).is_closed() == false
     fn complete(&self) -> bool {
         let prev = State::set_complete(&self.state);
 
@@ -1139,6 +1145,8 @@ impl<T> Inner<T> {
         true
     }
 
+    // requires: true
+    // ensures: (__out.is_ready() && (State::load(&self.state, Acquire).is_complete() || State::load(&self.state, Acquire).is_closed())) || (__out.is_pending() && !State::load(&self.state, Acquire).is_complete() && !State::load(&self.state, Acquire).is_closed())
     fn poll_recv(&self, cx: &mut Context<'_>) -> Poll<Result<T, RecvError>> {
         ready!(crate::trace::trace_leaf(cx));
         // Keep track of task budget
@@ -1238,6 +1246,8 @@ impl<T> Inner<T> {
 unsafe impl<T: Send> Send for Inner<T> {}
 unsafe impl<T: Send> Sync for Inner<T> {}
 
+// requires: *this ↦ _
+// ensures: *this ↦ _ && __out == this.with_mut(|v| *v)
 fn mut_load(this: &mut AtomicUsize) -> usize {
     this.with_mut(|v| *v)
 }
@@ -1351,6 +1361,8 @@ impl State {
         self.0 & RX_TASK_SET == RX_TASK_SET
     }
 
+    // requires: *cell ↦ _
+    // ensures: *cell ↦ _ && __out.0 == (cell.load(Ordering::Acquire) | RX_TASK_SET)
     fn set_rx_task(cell: &AtomicUsize) -> State {
         let val = cell.fetch_or(RX_TASK_SET, AcqRel);
         State(val | RX_TASK_SET)
@@ -1390,6 +1402,8 @@ impl State {
         self.0
     }
 
+    // requires: *cell ↦ _
+    // ensures: *cell ↦ _ && __out.0 == cell.load(order)
     fn load(cell: &AtomicUsize, order: Ordering) -> State {
         let val = cell.load(order);
         State(val)

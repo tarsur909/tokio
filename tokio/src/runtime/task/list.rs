@@ -86,6 +86,8 @@ impl<S: 'static> OwnedTasks<S> {
 
     /// Binds the provided task to this `OwnedTasks` instance. This fails if the
     /// `OwnedTasks` has been closed.
+    // requires: true
+    // ensures: true
     pub(crate) fn bind<T>(
         &self,
         task: T,
@@ -103,6 +105,8 @@ impl<S: 'static> OwnedTasks<S> {
     }
 
     /// The part of `bind` that's the same for every type of future.
+    // requires: self.closed ↦ _ && task.header().owner_id ↦ _
+    // ensures: __out.is_none() == self.closed.load(Ordering::Acquire)
     unsafe fn bind_inner(&self, task: Task<S>, notified: Notified<S>) -> Option<Notified<S>>
     where
         S: Schedule,
@@ -170,6 +174,8 @@ impl<S: 'static> OwnedTasks<S> {
         self.list.len()
     }
 
+    // requires: task.header().get_owner_id().is_none() || (task.header().get_owner_id().is_some() && task.header().get_owner_id().unwrap() == self.id)
+    // ensures: (task.header().get_owner_id().is_none() ==> __out.is_none()) && (task.header().get_owner_id().is_some() && task.header().get_owner_id().unwrap() == self.id ==> __out.is_some())
     pub(crate) fn remove(&self, task: &Task<S>) -> Option<Task<S>> {
         // If the task's owner ID is `None` then it is not part of any list and
         // doesn't need removing.

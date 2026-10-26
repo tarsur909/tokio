@@ -137,6 +137,8 @@ impl Semaphore {
     /// Creates a new semaphore with the initial number of permits
     ///
     /// Maximum number of permits on 32-bit platforms is `1<<29`.
+    // requires: permits <= Self::MAX_PERMITS
+    // ensures: __out.permits.load(std::sync::atomic::Ordering::Relaxed) == permits << Self::PERMIT_SHIFT && __out.waiters.lock().closed == false
     pub(crate) fn new(permits: usize) -> Self {
         assert!(
             permits <= Self::MAX_PERMITS,
@@ -220,6 +222,8 @@ impl Semaphore {
     }
 
     /// Returns the current number of available permits.
+    // requires: *self.permits ↦ _
+    // ensures: *self.permits ↦ _ && __out == (self.permits.load(Acquire) >> Self::PERMIT_SHIFT)
     pub(crate) fn available_permits(&self) -> usize {
         self.permits.load(Acquire) >> Self::PERMIT_SHIFT
     }
@@ -258,10 +262,14 @@ impl Semaphore {
     }
 
     /// Returns true if the semaphore is closed.
+    // requires: *self.permits ↦ _
+    // ensures: *self.permits ↦ _ && __out == (self.permits.load(std::sync::atomic::Ordering::Acquire) & Self::CLOSED == Self::CLOSED)
     pub(crate) fn is_closed(&self) -> bool {
         self.permits.load(Acquire) & Self::CLOSED == Self::CLOSED
     }
 
+    // requires: self.permits ↦ _ && num_permits <= Self::MAX_PERMITS
+    // ensures: (__out == Ok(())) ==> (self.permits.load(Acquire) == old(self.permits.load(Acquire)) - (num_permits << Self::PERMIT_SHIFT)) && (__out == Err(TryAcquireError::Closed)) ==> (old(self.permits.load(Acquire)) & Self::CLOSED == Self::CLOSED) && (__out == Err(TryAcquireError::NoPermits)) ==> (old(self.permits.load(Acquire)) < (num_permits << Self::PERMIT_SHIFT))
     pub(crate) fn try_acquire(&self, num_permits: usize) -> Result<(), TryAcquireError> {
         assert!(
             num_permits <= Self::MAX_PERMITS,
@@ -393,6 +401,8 @@ impl Semaphore {
         }
     }
 
+    // requires: true
+    // ensures: true
     fn poll_acquire(
         &self,
         cx: &mut Context<'_>,
@@ -530,6 +540,8 @@ impl fmt::Debug for Semaphore {
 }
 
 impl Waiter {
+    // requires: true
+    // ensures: __out.state.load(std::sync::atomic::Ordering::SeqCst) == num_permits
     fn new(
         num_permits: usize,
         #[cfg(all(tokio_unstable, feature = "tracing"))] ctx: trace::AsyncOpTracingCtx,
@@ -547,6 +559,8 @@ impl Waiter {
     /// Assign permits to the waiter.
     ///
     /// Returns `true` if the waiter should be removed from the queue
+    // requires: *self.state ↦ _ && *n ↦ _
+    // ensures: __out == (self.state.load(std::sync::atomic::Ordering::Acquire) == 0) && *n ↦ old(*n) - (old(self.state.load(std::sync::atomic::Ordering::Acquire)) - self.state.load(std::sync::atomic::Ordering::Acquire))
     fn assign_permits(&self, n: &mut usize) -> bool {
         let mut curr = self.state.load(Acquire);
         loop {
@@ -662,6 +676,8 @@ impl<'a> Acquire<'a> {
         });
     }
 
+    // requires: true
+    // ensures: true
     fn project(self: Pin<&mut Self>) -> (Pin<&mut Waiter>, &Semaphore, usize, &mut bool) {
         fn is_unpin<T: Unpin>() {}
         unsafe {
@@ -765,14 +781,20 @@ unsafe impl linked_list::Link for Waiter {
     type Handle = NonNull<Waiter>;
     type Target = Waiter;
 
+    // requires: *handle ↦ _
+    // ensures: __out == *handle
     fn as_raw(handle: &Self::Handle) -> NonNull<Waiter> {
         *handle
     }
 
+    // requires: true
+    // ensures: __out == ptr
     unsafe fn from_raw(ptr: NonNull<Waiter>) -> NonNull<Waiter> {
         ptr
     }
 
+    // requires: true
+    // ensures: __out == Waiter::addr_of_pointers(target)
     unsafe fn pointers(target: NonNull<Waiter>) -> NonNull<linked_list::Pointers<Waiter>> {
         Waiter::addr_of_pointers(target)
     }

@@ -340,6 +340,8 @@ impl<S: 'static> Task<S> {
         }
     }
 
+    // requires: true
+    // ensures: true
     unsafe fn from_raw(ptr: NonNull<Header>) -> Task<S> {
         Task::new(RawTask::from_raw(ptr))
     }
@@ -359,6 +361,8 @@ impl<S: 'static> Task<S> {
         self.raw.header()
     }
 
+    // requires: true
+    // ensures: __out == self.raw.header_ptr()
     fn header_ptr(&self) -> NonNull<Header> {
         self.raw.header_ptr()
     }
@@ -510,14 +514,20 @@ unsafe impl<S> linked_list::Link for Task<S> {
     type Handle = Task<S>;
     type Target = Header;
 
+    // requires: true
+    // ensures: __out == handle.raw.header_ptr()
     fn as_raw(handle: &Task<S>) -> NonNull<Header> {
         handle.raw.header_ptr()
     }
 
+    // requires: true
+    // ensures: true
     unsafe fn from_raw(ptr: NonNull<Header>) -> Task<S> {
         Task::from_raw(ptr)
     }
 
+    // requires: true
+    // ensures: __out == self::core::Trailer::addr_of_owned(Header::get_trailer(target))
     unsafe fn pointers(target: NonNull<Header>) -> NonNull<linked_list::Pointers<Header>> {
         self::core::Trailer::addr_of_owned(Header::get_trailer(target))
     }
@@ -529,6 +539,8 @@ unsafe impl<S> linked_list::Link for Task<S> {
 /// `get_shard_id` will not change. (The cast may throw away the upper 32 bits of the task id, but
 /// the shard id still won't change from call to call.)
 unsafe impl<S> sharded_list::ShardedListItem for Task<S> {
+    // requires: Header::get_id(target).0 as usize == Header::get_id(target).0 as usize
+    // ensures: __out == Header::get_id(target).0 as usize
     unsafe fn get_shard_id(target: NonNull<Self::Target>) -> usize {
         // SAFETY: The caller guarantees that `target` points at a valid task.
         let task_id = unsafe { Header::get_id(target) };

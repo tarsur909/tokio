@@ -73,6 +73,8 @@ impl fmt::Display for Id {
 }
 
 impl Id {
+    // requires: true
+    // ensures: __out.0 > 0
     pub(crate) fn next() -> Self {
         use crate::loom::sync::atomic::Ordering::Relaxed;
         use crate::loom::sync::atomic::StaticAtomicU64;

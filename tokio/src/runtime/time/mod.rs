@@ -34,6 +34,8 @@ struct AtomicOptionNonZeroU64(AtomicU64);
 
 // A helper type to store the `next_wake`.
 impl AtomicOptionNonZeroU64 {
+    // requires: true
+    // ensures: __out.0.load(std::sync::atomic::Ordering::Relaxed) == val.map_or(0, NonZeroU64::get)
     fn new(val: Option<NonZeroU64>) -> Self {
         Self(AtomicU64::new(val.map_or(0, NonZeroU64::get)))
     }
@@ -137,6 +139,8 @@ impl Driver {
     /// thread and `time_source` to get the current time and convert to ticks.
     ///
     /// Specifying the source of time is useful when testing.
+    // requires: shards > 0
+    // ensures: __out.1.inner.wheels.len() == shards as usize && __out.1.inner.is_shutdown.load(std::sync::atomic::Ordering::SeqCst) == false
     pub(crate) fn new(park: IoStack, clock: &Clock, shards: u32) -> (Driver, Handle) {
         assert!(shards > 0);
 
@@ -305,6 +309,8 @@ impl Handle {
     }
 
     // Returns the next wakeup time of this shard.
+    // requires: true
+    // ensures: __out == self.inner.lock_sharded_wheel(id).poll_at()
     pub(self) fn process_at_sharded_time(&self, id: u32, mut now: u64) -> Option<u64> {
         let mut waker_list = WakeList::new();
         let mut lock = self.inner.lock_sharded_wheel(id);
@@ -439,6 +445,8 @@ impl Handle {
 
 impl Inner {
     /// Locks the driver's sharded wheel structure.
+    // requires: true
+    // ensures: true
     pub(super) fn lock_sharded_wheel(
         &self,
         shard_id: u32,
@@ -449,6 +457,8 @@ impl Inner {
     }
 
     // Check whether the driver has been shutdown
+    // requires: true
+    // ensures: __out == self.is_shutdown.load(Ordering::SeqCst)
     pub(super) fn is_shutdown(&self) -> bool {
         self.is_shutdown.load(Ordering::SeqCst)
     }

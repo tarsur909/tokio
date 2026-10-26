@@ -18,6 +18,8 @@ unsafe impl<T> Send for Shared<T> {}
 unsafe impl<T> Sync for Shared<T> {}
 
 impl<T: 'static> Shared<T> {
+    // requires: true
+    // ensures: __out.0.len.load(std::sync::atomic::Ordering::Relaxed) == 0 && !__out.1.is_closed && __out.1.head.is_none() && __out.1.tail.is_none()
     pub(crate) fn new() -> (Shared<T>, Synced) {
         let inject = Shared {
             len: AtomicUsize::new(0),
@@ -54,6 +56,8 @@ impl<T: 'static> Shared<T> {
         true
     }
 
+    // requires: *self.len ↦ _
+    // ensures: *self.len ↦ _ && __out == self.len.load(std::sync::atomic::Ordering::Acquire)
     pub(crate) fn len(&self) -> usize {
         self.len.load(Acquire)
     }

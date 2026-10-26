@@ -16,6 +16,8 @@ pub(crate) struct EventInfo {
 }
 
 impl Default for EventInfo {
+    // requires: true
+    // ensures: __out.pending.load(std::sync::atomic::Ordering::Relaxed) == false
     fn default() -> Self {
         let (tx, _rx) = watch::channel(());
 

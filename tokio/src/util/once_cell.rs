@@ -25,6 +25,8 @@ impl<T> OnceCell<T> {
     /// If the `init` closure panics, then the `OnceCell` is poisoned and all
     /// future calls to `get` will panic.
     #[inline]
+    // requires: true
+    // ensures: std::ptr::eq(__out as *const T, self.value.get() as *const T)
     pub(crate) fn get(&self, init: impl FnOnce() -> T) -> &T {
         if !self.once.is_completed() {
             self.do_init(init);

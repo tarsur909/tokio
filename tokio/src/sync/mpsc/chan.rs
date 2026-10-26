@@ -109,6 +109,8 @@ impl<T> fmt::Debug for RxFields<T> {
 unsafe impl<T: Send, S: Send> Send for Chan<T, S> {}
 unsafe impl<T: Send, S: Sync> Sync for Chan<T, S> {}
 
+// requires: true
+// ensures: true
 pub(crate) fn channel<T, S: Semaphore>(semaphore: S) -> (Tx<T, S>, Rx<T, S>) {
     let (tx, rx) = list::channel();
 
@@ -208,6 +210,8 @@ impl<T, S: Semaphore> Tx<T, S> {
 }
 
 impl<T, S> Clone for Tx<T, S> {
+    // requires: Arc::strong_count(&self.inner) > 0
+    // ensures: __out.inner.tx_count.load(Relaxed) == old(self.inner.tx_count.load(Relaxed)) + 1 && Arc::ptr_eq(&__out.inner, &self.inner)
     fn clone(&self) -> Tx<T, S> {
         // Using a Relaxed ordering here is sufficient as the caller holds a
         // strong ref to `self`, preventing a concurrent decrement to zero.
@@ -255,6 +259,8 @@ impl<T, S: Semaphore> Rx<T, S> {
         self.inner.notify_rx_closed.notify_waiters();
     }
 
+    // requires: *self ↦ _
+    // ensures: __out == (self.inner.semaphore.is_closed() || self.inner.tx_count.load(std::sync::atomic::Ordering::Acquire) == 0)
     pub(crate) fn is_closed(&self) -> bool {
         // There two internal states that can represent a closed channel
         //
@@ -268,6 +274,8 @@ impl<T, S: Semaphore> Rx<T, S> {
         self.inner.semaphore.is_closed() || self.inner.tx_count.load(Acquire) == 0
     }
 
+    // requires: *self ↦ sep_v && sep_v.inner.rx_fields.get().is_some() && sep_v.inner.tx.is_some()
+    // ensures: true
     pub(crate) fn is_empty(&self) -> bool {
         self.inner.rx_fields.with(|rx_fields_ptr| {
             let rx_fields = unsafe { &*rx_fields_ptr };
@@ -275,6 +283,8 @@ impl<T, S: Semaphore> Rx<T, S> {
         })
     }
 
+    // requires: *self ↦ _
+    // ensures: *self ↦ _
     pub(crate) fn len(&self) -> usize {
         self.inner.rx_fields.with(|rx_fields_ptr| {
             let rx_fields = unsafe { &*rx_fields_ptr };
@@ -283,6 +293,8 @@ impl<T, S: Semaphore> Rx<T, S> {
     }
 
     /// Receive the next value
+    // requires: true
+    // ensures: __out.is_ready() || __out.is_pending()
     pub(crate) fn recv(&mut self, cx: &mut Context<'_>) -> Poll<Option<T>> {
         use super::block::Read;
 
@@ -340,6 +352,8 @@ impl<T, S: Semaphore> Rx<T, S> {
     ///
     /// For `limit > 0`, receives up to limit values into `buffer`.
     /// For `limit == 0`, immediately returns Ready(0).
+    // requires: true
+    // ensures: __out == Ready(0usize) && limit == 0 || (limit > 0 && (__out == Pending || (__out == Ready(buffer.len() - old(buffer.len())) && buffer.len() - old(buffer.len()) <= limit && buffer.len() >= old(buffer.len()))))
     pub(crate) fn recv_many(
         &mut self,
         cx: &mut Context<'_>,
@@ -422,6 +436,8 @@ impl<T, S: Semaphore> Rx<T, S> {
     }
 
     /// Try to receive the next value.
+    // requires: true
+    // ensures: __out.is_ok() || matches!(__out, Err(TryRecvError::Disconnected)) || matches!(__out, Err(TryRecvError::Empty))
     pub(crate) fn try_recv(&mut self) -> Result<T, TryRecvError> {
         use super::list::TryPopResult;
 
@@ -575,6 +591,8 @@ impl Semaphore for unbounded::Semaphore {
         }
     }
 
+    // requires: *self.0 ↦ _
+    // ensures: *self.0 ↦ _ && __out == (self.0.load(std::sync::atomic::Ordering::Acquire) >> 1 == 0)
     fn is_idle(&self) -> bool {
         self.0.load(Acquire) >> 1 == 0
     }
@@ -583,6 +601,8 @@ impl Semaphore for unbounded::Semaphore {
         self.0.fetch_or(1, Release);
     }
 
+    // requires: *self.0 ↦ _
+    // ensures: *self.0 ↦ _ && __out == (self.0.load(std::sync::atomic::Ordering::Acquire) & 1 == 1)
     fn is_closed(&self) -> bool {
         self.0.load(Acquire) & 1 == 1
     }

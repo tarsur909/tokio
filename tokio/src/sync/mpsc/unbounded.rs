@@ -92,6 +92,8 @@ impl<T> fmt::Debug for UnboundedReceiver<T> {
 /// **Note** that the amount of available system memory is an implicit bound to
 /// the channel. Using an `unbounded` channel has the ability of causing the
 /// process to run out of memory. In this case, the process will be aborted.
+// requires: true
+// ensures: true
 pub fn unbounded_channel<T>() -> (UnboundedSender<T>, UnboundedReceiver<T>) {
     let (tx, rx) = chan::channel(Semaphore(AtomicUsize::new(0)));
 
@@ -526,6 +528,8 @@ impl<T> UnboundedSender<T> {
         Ok(())
     }
 
+    // requires: self.chan.semaphore().0 ↦ _ && (self.chan.semaphore().0.load(std::sync::atomic::Ordering::Acquire) & 1 == 0)
+    // ensures: __out == true ==> (self.chan.semaphore().0.load(std::sync::atomic::Ordering::Acquire) & 1 == 0) && __out == false ==> (self.chan.semaphore().0.load(std::sync::atomic::Ordering::Acquire) & 1 == 1)
     fn inc_num_messages(&self) -> bool {
         use std::process;
         use std::sync::atomic::Ordering::{AcqRel, Acquire};

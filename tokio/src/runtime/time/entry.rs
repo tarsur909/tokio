@@ -128,6 +128,8 @@ impl StateCell {
     }
 
     /// Returns the current expiration time, or None if not currently scheduled.
+    // requires: self.state ↦ _
+    // ensures: __out == None && self.state.load(Ordering::Relaxed) == STATE_DEREGISTERED || __out == Some(self.state.load(Ordering::Relaxed)) && self.state.load(Ordering::Relaxed) != STATE_DEREGISTERED
     fn when(&self) -> Option<u64> {
         let cur_state = self.state.load(Ordering::Relaxed);
 
@@ -149,6 +151,8 @@ impl StateCell {
         self.read_state()
     }
 
+    // requires: true
+    // ensures: (self.state.load(Ordering::Acquire) == STATE_DEREGISTERED ==> __out.is_ready()) && (self.state.load(Ordering::Acquire) != STATE_DEREGISTERED ==> __out.is_pending())
     fn read_state(&self) -> Poll<TimerResult> {
         let cur_state = self.state.load(Ordering::Acquire);
 
@@ -169,6 +173,8 @@ impl StateCell {
     /// containing the current scheduled time.
     ///
     /// SAFETY: Must hold the driver lock.
+    // requires: true
+    // ensures: (__out.is_ok() ==> self.state.load(Ordering::Relaxed) == STATE_PENDING_FIRE) && (__out.is_err() ==> __out.unwrap_err() == self.state.load(Ordering::Relaxed) && __out.unwrap_err() > not_after)
     unsafe fn mark_pending(&self, not_after: u64) -> Result<(), u64> {
         // Quick initial debug check to see if the timer is already fired. Since
         // firing the timer can only happen with the driver lock held, we know
@@ -250,6 +256,8 @@ impl StateCell {
     /// timestamp is earlier than the old timestamp, (or occasionally
     /// spuriously) returns Err without changing the timer's state. In this
     /// case, the timer must be deregistered and re-registered.
+    // requires: true
+    // ensures: __out == Ok(()) && self.state.load(Ordering::Relaxed) == new_timestamp || __out == Err(())
     fn extend_expiration(&self, new_timestamp: u64) -> Result<(), ()> {
         let mut prior = self.state.load(Ordering::Relaxed);
         loop {
@@ -273,6 +281,8 @@ impl StateCell {
     /// be registered with the driver. This check is performed with relaxed
     /// ordering, but is conservative - if it returns false, the timer is
     /// definitely _not_ registered.
+    // requires: true
+    // ensures: (__out == (self.state.load(Ordering::Relaxed) != u64::MAX))
     pub(super) fn might_be_registered(&self) -> bool {
         self.state.load(Ordering::Relaxed) != u64::MAX
     }
@@ -382,6 +392,8 @@ impl TimerShared {
     }
 
     /// Gets the cached time-of-expiration value.
+    // requires: true
+    // ensures: __out == self.cached_when.load(Ordering::Relaxed)
     pub(super) fn cached_when(&self) -> u64 {
         // Cached-when is only accessed under the driver lock, so we can use relaxed
         self.cached_when.load(Ordering::Relaxed)
@@ -392,6 +404,8 @@ impl TimerShared {
     ///
     /// SAFETY: Must be called with the driver lock held, and when this entry is
     /// not in any timer wheel lists.
+    // requires: self.cached_when ↦ _ ⋆ *self ↦ _
+    // ensures: __out == self.true_when() && self.cached_when.load(Ordering::Relaxed) == __out
     pub(super) unsafe fn sync_when(&self) -> u64 {
         let true_when = self.true_when();
 
@@ -454,14 +468,20 @@ unsafe impl linked_list::Link for TimerShared {
 
     type Target = TimerShared;
 
+    // requires: *handle ↦ _
+    // ensures: __out == handle.inner
     fn as_raw(handle: &Self::Handle) -> NonNull<Self::Target> {
         handle.inner
     }
 
+    // requires: true
+    // ensures: __out.inner == ptr
     unsafe fn from_raw(ptr: NonNull<Self::Target>) -> Self::Handle {
         TimerHandle { inner: ptr }
     }
 
+    // requires: true
+    // ensures: __out == TimerShared::addr_of_pointers(target)
     unsafe fn pointers(
         target: NonNull<Self::Target>,
     ) -> NonNull<linked_list::Pointers<Self::Target>> {
@@ -590,6 +610,8 @@ impl TimerEntry {
 }
 
 impl TimerHandle {
+    // requires: self.inner.as_ref() as *const _ as usize != 0
+    // ensures: __out == self.inner.as_ref().cached_when()
     pub(super) unsafe fn cached_when(&self) -> u64 {
         unsafe { self.inner.as_ref().cached_when() }
     }
@@ -619,6 +641,8 @@ impl TimerHandle {
     /// SAFETY: The caller must ensure that the handle remains valid, the driver
     /// lock is held, and that the timer is not in any wheel linked lists.
     /// After returning Ok, the entry must be added to the pending list.
+    // requires: true
+    // ensures: (__out.is_ok() ==> self.inner.as_ref().cached_when() == u64::MAX) && (__out.is_err() ==> self.inner.as_ref().cached_when() == __out.unwrap_err())
     pub(super) unsafe fn mark_pending(&self, not_after: u64) -> Result<(), u64> {
         match self.inner.as_ref().state.mark_pending(not_after) {
             Ok(()) => {
@@ -644,6 +668,8 @@ impl TimerHandle {
     ///
     /// SAFETY: The driver lock must be held while invoking this function, and
     /// the entry must not be in any wheel linked lists.
+    // requires: true
+    // ensures: true
     pub(super) unsafe fn fire(self, completed_state: TimerResult) -> Option<Waker> {
         self.inner.as_ref().state.fire(completed_state)
     }
